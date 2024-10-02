@@ -18,8 +18,10 @@
 
 ## Usage
  JSpector is easy to use and can be run from the command line. Simply provide the URL of the web application you want to scan, and the tool will do the rest.
- Example Usage : python3 jspector.py -i https://example.com
-
+ Example Usage : 
+     * python3 jspector.py -i https://example.com
+     * python3 jspector.py -i file:///home/kali/Desktop/test.txt
+     
 ## System Requirements
  * Python 3.6 or later
  * pip3 (Python package manager)
