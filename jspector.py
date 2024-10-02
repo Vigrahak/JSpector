@@ -331,7 +331,7 @@ def main():
         parser = CustomArgumentParser()
         parser.add_argument("-i", "--input", help=f"{MAGENTA}Input a: URL, file or folder{RESET}", required="True", action="store")
         parser.add_argument("-r", "--regex", help=f"{BLUE}RegEx for filtering purposes against found endpoint (e.g: ^/api/){RESET}", action="store")
-        parser.epilog = f"{BLUE}Example: {WHITE}python3 jspector.py -i https://example.com{RESET}"
+        parser.epilog = f"{BLUE}Example: {WHITE}python3 jspector.py -i https://example.com or python3 jspector.py -i file:///home/kali/Desktop/test.txt{RESET}"
         args = parser.parse_args()
 
         if args.input.startswith("file://"):
