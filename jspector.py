@@ -32,6 +32,7 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 def signal_handler(sig, frame):
     print("\nCtrl+C pressed. Exiting...")
     sys.exit(0)
+    
 signal.signal(signal.SIGINT, signal_handler)
 
 # Colors
@@ -208,8 +209,21 @@ def parser_input(input):
     if os.path.exists(input):
         return [input]
     else:
-        print(f"{RED}Error: {WHITE}file could not be found (maybe you forgot to add http/https).{RESET}")
-        sys.exit(0)
+        while True:
+            print(f"{RED}Error: {WHITE}file could not be found (maybe you forgot to add http/https).{RESET}")
+            print(f"{GREEN}Please enter a URL that starts with http://, https://, ftp://, file://, or ftps://{RESET}")
+            input = input("Enter a URL: ")
+            if input.startswith(schemes):
+                return [input]
+            elif input.startswith('view-source:'):
+                return [input[12:]]
+            elif '*' in input:
+                paths = glob.glob(os.path.abspath(input))
+                for index, path in enumerate(paths):
+                    paths[index] = "file://%s" % path
+                return (paths if len(paths) > 0 else [None])
+            elif os.path.exists(input):
+                return [input]
 
 def cli_output(matched):
     ''' cli output '''
@@ -335,7 +349,7 @@ def main():
         args = parser.parse_args()
 
         if args.input.startswith("file://"):
-            print("Opening file path directly...")
+            print(f"{BLUE}Opening file path directly...{RESET}")
             file_path = args.input.replace("file://", "")
             browser = None
             try:
@@ -521,5 +535,6 @@ def main():
     except KeyboardInterrupt:
         print("\nCtrl+C pressed. Exiting...")
         sys.exit(0)
+        
 if __name__ == "__main__":
     main()
