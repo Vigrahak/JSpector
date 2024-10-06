@@ -21,6 +21,7 @@
  Example Usage: 
    * python3 jspector.py -i https://example.com
    * python3 jspector.py -i file:///home/kali/Desktop/test.txt
+   * python3 jspector.py -uf /home/kali/Desktop/urls.txt
      
 ## System Requirements
  * Python 3.6 or later
