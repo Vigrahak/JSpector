@@ -43,7 +43,7 @@ MAGENTA = '\033[1;35m'
 RED = '\033[1;31m'
 GREEN = '\033[1;32m'
 YELLOW = '\033[1;33m'
-LTCYAN = '\033[1;36m'
+CYAN = '\033[1;36m'
 
 _regex = {
     'google_api'     : r'AIza[0-9A-Za-z-_]{35}',
@@ -109,12 +109,12 @@ _regex = {
 }
 
 def print_banner():
-    print(f"{LTCYAN}█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█")
-    print(f"{LTCYAN}█                      » JSpector «                       █")
-    print(f"{LTCYAN}█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█{RESET}")
+    print(f"{CYAN}█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█")
+    print(f"{CYAN}█                      » JSpector «                       █")
+    print(f"{CYAN}█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█{RESET}")
     print("")
-    print(f"{LTCYAN}                                              - By Vigrahak{RESET}")
-    print(f"{RED}Have a beer :  {LTCYAN}https://www.paypal.com/paypalme/SourabhS1828")
+    print(f"{CYAN}                                              - By Vigrahak{RESET}")
+    print(f"{RED}Have a beer :  {CYAN}https://www.paypal.com/paypalme/SourabhS1828")
     print("")
 
 def getContext(matches, content, name, rex='.*'):
@@ -207,7 +207,14 @@ def parser_input(input):
             paths[index] = "file://%s" % path
         return (paths if len(paths) > 0 else [None])
     if os.path.exists(input):
-        return [input]
+        try:
+            with open(input, 'r') as file:
+                urls = file.readlines()
+                urls = [url.strip() for url in urls]
+                return urls
+        except Exception as e:
+            print(f"{RED}Error: {WHITE}{e}{RESET}")
+            return [None]
     else:
         while True:
             print(f"{RED}Error: {WHITE}file could not be found (maybe you forgot to add http/https).{RESET}")
@@ -223,7 +230,14 @@ def parser_input(input):
                     paths[index] = "file://%s" % path
                 return (paths if len(paths) > 0 else [None])
             elif os.path.exists(input):
-                return [input]
+                try:
+                    with open(input, 'r') as file:
+                        urls = file.readlines()
+                        urls = [url.strip() for url in urls]
+                        return urls
+                except Exception as e:
+                    print(f"{RED}Error: {WHITE}{e}{RESET}")
+                    return [None]
 
 def cli_output(matched):
     ''' cli output '''
@@ -264,39 +278,43 @@ def extractjsurl(content, base_url):
     return all_src
 
 def send_request(url, cookie=None, browser=None):
+    """Send a request to the specified URL and return the browser and content."""
     if browser is None:
-        browser = None
-        try:
-            options = ChromeOptions()
-            browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-        except (WebDriverException, SessionNotCreatedException) as e:
-            try:
-                options = FirefoxOptions()
-                browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
-            except (WebDriverException, SessionNotCreatedException) as e:
-                try:
-                    options = EdgeOptions()
-                    browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
-                except (WebDriverException, SessionNotCreatedException) as e:
-                    print("Error: Unable to detect browser. Please install a supported browser.")
-                    sys.exit(1)
-        except NoSuchWindowException as e:
-            print(f"Error: {e}")
-            print("Error: Unable to detect browser. Please install a supported browser.")
-            sys.exit(1)
-
-    print(f"{BLUE} Opening {browser.name}...{RESET}")
-    browser.get(url)
-    if cookie:
-        cookies = browser.get_cookies()
-        cookie_string = ''
-        for cookie in cookies:
-            cookie_string += f"{cookie['name']}={cookie['value']}; "
-        cookie = cookie_string
-        print(f"{WHITE} Cookies captured: {cookie_string}{RESET}")
-
+        browser = initialize_browser()
+    
+    try:
+        browser.get(url)
+        if cookie:
+            cookies = browser.get_cookies()
+            cookie_string = ''
+            for cookie in cookies:
+                cookie_string += f"{cookie['name']}={cookie['value']}; "
+            cookie = cookie_string
+            print(f"{WHITE} Cookies captured: {cookie_string}{RESET}")
+    except WebDriverException as e:
+        print(f"{RED}Error: {WHITE}{e}{RESET}")
+        print("Error: Unable to detect browser. Please install a supported browser.")
+        sys.exit(1)
+    
     content = browser.page_source
     return browser, content
+
+def initialize_browser():
+    """Initialize a browser instance."""
+    try:
+        options = ChromeOptions()
+        return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    except (WebDriverException, SessionNotCreatedException) as e:
+        try:
+            options = FirefoxOptions()
+            return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+        except (WebDriverException, SessionNotCreatedException) as e:
+            try:
+                options = EdgeOptions()
+                return webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+            except (WebDriverException, SessionNotCreatedException) as e:
+                print("Error: Unable to detect browser. Please install a supported browser.")
+                sys.exit(1)
 
 def browser_interaction(browser, url):
     try:
@@ -343,195 +361,391 @@ def main():
     try:
         print_banner()
         parser = CustomArgumentParser()
-        parser.add_argument("-i", "--input", help=f"{MAGENTA}Input a: URL, file or folder{RESET}", required="True", action="store")
+        parser.add_argument("-i", "--input", help=f"{MAGENTA}Input a: URL, file or folder{RESET}", action="store")
         parser.add_argument("-r", "--regex", help=f"{BLUE}RegEx for filtering purposes against found endpoint (e.g: ^/api/){RESET}", action="store")
-        parser.epilog = f"{BLUE}Example: {WHITE}python3 jspector.py -i https://example.com or python3 jspector.py -i file:///home/kali/Desktop/test.txt{RESET}"
+        parser.add_argument("-uf", "--urlfile", help=f"{BLUE}Read URLs from a text file{RESET}", action="store")
+        parser.epilog = f"{BLUE}Example: {WHITE}python3 jspector.py -i https://example.com or python3 jspector.py -i file:///home/kali/Desktop/test.txt or python3 jspector.py -uf /home/kali/Desktop/urls.txt{RESET}"
         args = parser.parse_args()
 
-        if args.input.startswith("file://"):
-            print(f"{BLUE}Opening file path directly...{RESET}")
-            file_path = args.input.replace("file://", "")
-            browser = None
-            try:
-                options = ChromeOptions()
-                browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-            except (WebDriverException, SessionNotCreatedException) as e:
+        if args.input:
+            if args.input.startswith("file://"):
+                print(f"{BLUE}Opening file path directly...{RESET}")
+                file_path = args.input.replace("file://", "")
+                browser = None
                 try:
-                    options = FirefoxOptions()
-                    browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                    options = ChromeOptions()
+                    browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
                 except (WebDriverException, SessionNotCreatedException) as e:
                     try:
-                        options = EdgeOptions()
-                        browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                        options = FirefoxOptions()
+                        browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
                     except (WebDriverException, SessionNotCreatedException) as e:
+                        try:
+                            options = EdgeOptions()
+                            browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                        except (WebDriverException, SessionNotCreatedException) as e:
+                            print("Error: Unable to detect browser. Please install a supported browser.")
+                            sys.exit(1)
+                browser.get("file://" + file_path)
+                with open(file_path, 'r') as file:
+                    content = file.read()
+                    matched = parser_file(content)
+                    cli_output(matched)
+                print(f"{GREEN} Done!{RESET}")
+                browser.quit()
+            else:
+                if args.input[-1:] == "/":
+                    # /aa/ -> /aa
+                    args.input = args.input[:-1]
+
+                # add args
+                if args.regex:
+                    # validate regular exp
+                    try:
+                        r = re.search(args.regex, ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(random.randint(10, 50))))
+                    except Exception as e:
+                        print('your python regex isn\'t valid')
+                        sys.exit()
+
+                    _regex.update({
+                        'custom_regex': args.regex
+                    })
+
+                # convert input to URLs or JS files
+                urls = parser_input(args.input)
+
+                cookie = None
+                print(f"{GREEN} Do you want to login or register in the website ? If yes, please type 'y ', otherwise type 'n'.{RESET}")
+                choice = input().lower()
+                if choice == 'y':
+                    browser = None
+                    try:
+                        options = ChromeOptions()
+                        browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+                    except (WebDriverException, SessionNotCreatedException) as e:
+                        try:
+                            options = FirefoxOptions()
+                            browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                        except (WebDriverException, SessionNotCreatedException) as e:
+                            try:
+                                options = EdgeOptions()
+                                browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                            except (WebDriverException, SessionNotCreatedException) as e:
+                                print("Error: Unable to detect browser. Please install a supported browser.")
+                                sys.exit(1)
+                    except NoSuchWindowException as e:
+                        print(f"Error: {e}")
                         print("Error: Unable to detect browser. Please install a supported browser.")
                         sys.exit(1)
-            browser.get("file://" + file_path)
-            with open(file_path, 'r') as file:
-                content = file.read()
-                matched = parser_file(content)
-                cli_output(matched)
-            print(f"{GREEN} Done!{RESET}")
-            browser.quit()
-        else:
-            if args.input[-1:] == "/":
-                # /aa/ -> /aa
-                args.input = args.input[:-1]
 
-            # add args
-            if args.regex:
-                # validate regular exp
-                try:
-                    r = re.search(args.regex, ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(random.randint(10, 50))))
-                except Exception as e:
-                    print('your python regex isn\'t valid')
-                    sys.exit()
+                    browser.get(args.input)
+                    print(f"{WHITE} Please login or register to the page.{RESET}")
+                    print(f"{WHITE} Type 'go' when you're done: {RESET}")
+                    while True:
+                        done = input().lower()
+                        if done == 'go':
+                            cookies = browser.get_cookies()
+                            cookie_string = ''
+                            for cookie in cookies:
+                                cookie_string += f"{cookie['name']}={cookie['value']}; "
+                            cookie = cookie_string
+                            print(f"{WHITE} Cookies captured: {cookie_string}{RESET}")
+                            break
+                        else:
+                            print(f"{GREEN} Please type 'go' when you're done.{RESET}")
 
-                _regex.update({
-                    'custom_regex': args.regex
-                })
-
-            # convert input to URLs or JS files
-            urls = parser_input(args.input)
-
-            cookie = None
-            print(f"{GREEN} Do you want to login or register in the website ? If yes, please type 'y ', otherwise type 'n'.{RESET}")
-            choice = input().lower()
-            if choice == 'y':
-                browser = None
-                try:
-                    options = ChromeOptions()
-                    browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-                except (WebDriverException, SessionNotCreatedException) as e:
+                    # Continue with the script in the same browser
+                    browser, content = send_request(args.input, cookie, browser)
+                elif choice == 'n':
+                    print(f"{WHITE} Continuing without cookies.{RESET}")
+                    browser = None
                     try:
-                        options = FirefoxOptions()
-                        browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                        options = ChromeOptions()
+                        browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
                     except (WebDriverException, SessionNotCreatedException) as e:
                         try:
-                            options = EdgeOptions()
-                            browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                            options = FirefoxOptions()
+                            browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
                         except (WebDriverException, SessionNotCreatedException) as e:
-                            print("Error: Unable to detect browser. Please install a supported browser.")
-                            sys.exit(1)
-                except NoSuchWindowException as e:
-                    print(f"Error: {e}")
-                    print("Error: Unable to detect browser. Please install a supported browser.")
-                    sys.exit(1)
-                                
-                browser.get(args.input)
-                print(f"{WHITE} Please login or register to the page.{RESET}")
-                print(f"{WHITE} Type 'go' when you're done: {RESET}")
-                while True:
-                    done = input().lower()
-                    if done == 'go':
-                        cookies = browser.get_cookies()
-                        cookie_string = ''
-                        for cookie in cookies:
-                            cookie_string += f"{cookie['name']}={cookie['value']}; "
-                        cookie = cookie_string
-                        print(f"{WHITE} Cookies captured: {cookie_string}{RESET}")
-                        break
-                    else:
-                        print(f"{GREEN} Please type 'go' when you're done.{RESET}")
+                            try:
+                                options = EdgeOptions()
+                                browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                            except (WebDriverException, SessionNotCreatedException) as e:
+                                print("Error: Unable to detect browser. Please install a supported browser.")
+                                sys.exit(1)
+                    except NoSuchWindowException as e:
+                        print(f"Error: {e}")
+                        print("Error: Unable to detect browser. Please install a supported browser.")
+                        sys.exit(1)
 
-                # Continue with the script in the same browser
-                browser, content = send_request(args.input, cookie, browser)
-            elif choice == 'n':
-                print(f"{WHITE} Continuing without cookies.{RESET}")
-                browser = None
-                try:
-                    options = ChromeOptions()
-                    browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-                except (WebDriverException, SessionNotCreatedException) as e:
+                    browser, content = send_request(args.input, cookie, browser)
+                else:
+                    print(f"{WHITE} Invalid choice. Continuing without cookies.{RESET}")
+                    browser = None
                     try:
-                        options = FirefoxOptions()
-                        browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                        options = ChromeOptions()
+                        browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
                     except (WebDriverException, SessionNotCreatedException) as e:
                         try:
-                            options = EdgeOptions()
-                            browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                            options = FirefoxOptions()
+                            browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
                         except (WebDriverException, SessionNotCreatedException) as e:
-                            print("Error: Unable to detect browser. Please install a supported browser.")
-                            sys.exit(1)
-                except NoSuchWindowException as e:
-                    print(f"Error: {e}")
-                    print("Error: Unable to detect browser. Please install a supported browser.")
-                    sys.exit(1)
+                            try:
+                                options = EdgeOptions()
+                                browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                            except (WebDriverException, SessionNotCreatedException) as e:
+                                print("Error: Unable to detect browser. Please install a supported browser.")
+                                sys.exit(1)
+                    except NoSuchWindowException as e:
+                        print(f"Error: {e}")
+                        print("Error: Unable to detect browser. Please install a supported browser.")
+                        sys.exit(1)
 
-                browser, content = send_request(args.input, cookie, browser)
-            else:
-                print(f"{WHITE} Invalid choice. Continuing without cookies.{RESET}")
-                browser = None
-                try:
-                    options = ChromeOptions()
-                    browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options =options)
-                except (WebDriverException, SessionNotCreatedException) as e:
+                    browser, content = send_request(args.input, cookie, browser)
+
+                processed_urls = set()
+
+                for url in urls:
                     try:
-                        options = FirefoxOptions()
-                        browser = webdriver .Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
-                    except (WebDriverException, SessionNotCreatedException) as e:
-                        try:
-                            options = EdgeOptions()
-                            browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
-                        except (WebDriverException, SessionNotCreatedException) as e:
-                            print("Error: Unable to detect browser. Please install a supported browser.")
-                            sys.exit(1)
-                except NoSuchWindowException as e:
-                    print(f"Error: {e}")
-                    print("Error: Unable to detect browser. Please install a supported browser.")
-                    sys.exit(1)
-                
-                browser, content = send_request(args.input, cookie, browser)
-
-            processed_urls = set()
-
-            for url in urls:
-                try:
-                    if browser is None:
-                        browser, content = send_request(url, cookie)
-                    else:
-                        browser = browser_interaction(browser, url)
-                        content = browser.page_source
-
-                    response = requests.get(url)
-                    if 300 <= response.status_code < 400:
-                        redirect_url = response.headers['Location']
-                        if redirect_url not in processed_urls:
-                            processed_urls.add(redirect_url)
-                            print(f"{LTCYAN}[ + ] Redirected URL: {redirect_url}{RESET}")
-                            browser = browser_interaction(browser, redirect_url)
+                        if browser is None:
+                            browser, content = send_request(url, cookie)
+                        else:
+                            browser = browser_interaction(browser, url)
                             content = browser.page_source
+
+                        response = requests.get(url)
+                        if 300 <= response.status_code < 400:
+                            redirect_url = response.headers['Location']
+                            if redirect_url not in processed_urls:
+                                processed_urls.add(redirect_url)
+                                print(f"{YELLOW}[ + ] Redirected URL: {redirect_url}{RESET}")
+                                browser = browser_interaction(browser, redirect_url)
+                                content = browser.page_source
+                                matched = parser_file(content)
+                                cli_output(matched)
+
+                                # extract JavaScript links from the redirected URL
+                                js_urls = extractjsurl(content, redirect_url)
+                                for js_url in js_urls:
+                                    if js_url not in processed_urls:
+                                        processed_urls.add(js_url)
+                                        print(f"{YELLOW}[ + ] JS URL: {js_url}{RESET}")
+                                        browser = browser_interaction(browser, js_url)
+                                        content = browser.page_source
+                                        matched = parser_file(content)
+                                        cli_output(matched)
+                        else:
+                            # No redirect, process the initial URL
                             matched = parser_file(content)
                             cli_output(matched)
-
-                            # extract JavaScript links from the redirected URL
-                            js_urls = extractjsurl(content, redirect_url)
+                            js_urls = extractjsurl(content, url)
                             for js_url in js_urls:
                                 if js_url not in processed_urls:
                                     processed_urls.add(js_url)
-                                    print(f"{LTCYAN}[ + ] JS URL: {js_url}{RESET}")
+                                    print(f"{YELLOW}[ + ] JS URL: {js_url}{RESET}")
                                     browser = browser_interaction(browser, js_url)
                                     content = browser.page_source
                                     matched = parser_file(content)
                                     cli_output(matched)
+                    except requests.exceptions.RequestException as e:
+                        print(f"Error: {e}")
+                if browser is not None:
+                    browser.quit()
+                print(f"{GREEN} Done!{RESET}")
+        elif args.urlfile:
+            try:
+                with open(args.urlfile, 'r') as file:
+                    urls = file.readlines()
+                    urls = [url.strip() for url in urls]
+                for url in urls:
+                    print(f"{CYAN}Processing URL: {url}{RESET}")
+                    args.input = url
+                    if args.input.startswith("file://"):
+                        print(f"{BLUE}Opening file path directly...{RESET}")
+                        file_path = args.input.replace("file://", "")
+                        browser = None
+                        try:
+                            options = ChromeOptions()
+                            browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+                        except (WebDriverException, SessionNotCreatedException) as e:
+                            try:
+                                options = FirefoxOptions()
+                                browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                            except (WebDriverException, SessionNotCreatedException) as e:
+                                try:
+                                    options = EdgeOptions()
+                                    browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                                except (WebDriverException, SessionNotCreatedException) as e:
+                                    print("Error: Unable to detect browser. Please install a supported browser.")
+                                    sys.exit(1)
+                        browser.get("file://" + file_path)
+                        with open(file_path, 'r') as file:
+                            content = file.read()
+                            matched = parser_file(content)
+                            cli_output(matched)
+                        print(f"{GREEN} Done!{RESET}")
+                        browser.quit()
                     else:
-                        # No redirect, process the initial URL
-                        matched = parser_file(content)
-                        cli_output(matched)
-                        js_urls = extractjsurl(content, url)
-                        for js_url in js_urls:
-                            if js_url not in processed_urls:
-                                processed_urls.add(js_url)
-                                print(f"{LTCYAN}[ + ] JS URL: {js_url}{RESET}")
-                                browser = browser_interaction(browser, js_url)
-                                content = browser.page_source
-                                matched = parser_file(content)
-                                cli_output(matched)
-                except requests.exceptions.RequestException as e:
-                    print(f"Error: {e}")
-            if browser is not None:
-                browser.quit()
-            print(f"{GREEN} Done!{RESET}")
+                        if args.input[-1:] == "/":
+                            # /aa/ -> /aa
+                            args.input = args.input[:-1]
+
+                        # add args
+                        if args.regex:
+                            # validate regular exp
+                            try:
+                                r = re.search(args.regex, ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(random.randint(10, 50))))
+                            except Exception as e:
+                                print('your python regex isn\'t valid')
+                                sys.exit()
+
+                            _regex.update({
+                                'custom_regex': args.regex
+                            })
+
+                        # convert input to URLs or JS files
+                        urls = parser_input(args.input)
+
+                        cookie = None
+                        print(f"{GREEN} Do you want to login or register in the website ? If yes, please type 'y ', otherwise type 'n'.{RESET}")
+                        choice = input().lower()
+                        if choice == 'y':
+                            browser = None
+                            try:
+                                options = ChromeOptions()
+                                browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+                            except (WebDriverException, SessionNotCreatedException) as e:
+                                try:
+                                    options = FirefoxOptions()
+                                    browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                                except (WebDriverException, SessionNotCreatedException) as e:
+                                    try:
+                                        options = EdgeOptions()
+                                        browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                                    except (WebDriverException, SessionNotCreatedException) as e:
+                                        print("Error: Unable to detect browser. Please install a supported browser.")
+                                        sys.exit(1)
+                            except NoSuchWindowException as e:
+                                print(f"Error: {e}")
+                                print("Error: Unable to detect browser. Please install a supported browser.")
+                                sys.exit(1)
+
+                            browser.get(args.input)
+                            print(f"{WHITE} Please login or register to the page.{RESET}")
+                            print(f"{WHITE} Type 'go' when you're done: {RESET}")
+                            while True:
+                                done = input().lower()
+                                if done == 'go':
+                                    cookies = browser.get_cookies()
+                                    cookie_string = ''
+                                    for cookie in cookies:
+                                        cookie_string += f"{cookie['name']}={cookie['value']}; "
+                                    cookie = cookie_string
+                                    print(f"{WHITE} Cookies captured: {cookie_string}{RESET}")
+                                    break
+                                else:
+                                    print(f"{GREEN} Please type 'go' when you're done.{RESET}")
+
+                            # Continue with the script in the same browser
+                            browser, content = send_request(args.input, cookie, browser)
+                        elif choice == 'n':
+                            print(f"{WHITE} Continuing without cookies.{RESET}")
+                            browser = None
+                            try:
+                                options = ChromeOptions()
+                                browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+                            except (WebDriverException, SessionNotCreatedException) as e:
+                                try:
+                                    options = FirefoxOptions()
+                                    browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                                except (WebDriverException, SessionNotCreatedException) as e:
+                                    try:
+                                        options = EdgeOptions()
+                                        browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                                    except (WebDriverException, SessionNotCreatedException) as e:
+                                        print("Error: Unable to detect browser. Please install a supported browser.")
+                                        sys.exit(1)
+                            except NoSuchWindowException as e:
+                                print(f"Error: {e}")
+                                print("Error: Unable to detect browser. Please install a supported browser.")
+                                sys.exit(1)
+
+                            browser, content = send_request(args.input, cookie, browser)
+                        else:
+                            print(f"{WHITE} Invalid choice. Continuing without cookies.{RESET}")
+                            browser = None
+                            try:
+                                options = ChromeOptions()
+                                browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+                            except (WebDriverException, SessionNotCreatedException) as e:
+                                try:
+                                    options = FirefoxOptions()
+                                    browser = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+                                except (WebDriverException, SessionNotCreatedException) as e:
+                                    try:
+                                        options = EdgeOptions()
+                                        browser = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+                                    except ( WebDriverException, SessionNotCreatedException) as e:
+                                        print("Error: Unable to detect browser. Please install a supported browser.")
+                                        sys.exit(1)
+                            except NoSuchWindowException as e:
+                                print(f"Error: {e}")
+                                print("Error: Unable to detect browser. Please install a supported browser.")
+                                sys.exit(1)
+
+                            browser, content = send_request(args.input, cookie, browser)
+
+                        processed_urls = set()
+
+                        for url in urls:
+                            try:
+                                if browser is None:
+                                    browser, content = send_request(url, cookie)
+                                else:
+                                    browser = browser_interaction(browser, url)
+                                    content = browser.page_source
+
+                                response = requests.get(url)
+                                if 300 <= response.status_code < 400:
+                                    redirect_url = response.headers['Location']
+                                    if redirect_url not in processed_urls:
+                                        processed_urls.add(redirect_url)
+                                        print(f"{YELLOW}[ + ] Redirected URL: {redirect_url}{RESET}")
+                                        browser = browser_interaction(browser, redirect_url)
+                                        content = browser.page_source
+                                        matched = parser_file(content)
+                                        cli_output(matched)
+
+                                        # extract JavaScript links from the redirected URL
+                                        js_urls = extractjsurl(content, redirect_url)
+                                        for js_url in js_urls:
+                                            if js_url not in processed_urls:
+                                                processed_urls.add(js_url)
+                                                print(f"{YELLOW}[ + ] JS URL: {js_url}{RESET}")
+                                                browser = browser_interaction(browser, js_url)
+                                                content = browser.page_source
+                                                matched = parser_file(content)
+                                                cli_output(matched)
+                                else:
+                                    # No redirect, process the initial URL
+                                    matched = parser_file(content)
+                                    cli_output(matched)
+                                    js_urls = extractjsurl(content, url)
+                                    for js_url in js_urls:
+                                        if js_url not in processed_urls:
+                                            processed_urls.add(js_url)
+                                            print(f"{YELLOW}[ + ] JS URL: {js_url}{RESET}")
+                                            browser = browser_interaction(browser, js_url)
+                                            content = browser.page_source
+                                            matched = parser_file(content)
+                                            cli_output(matched)
+                            except requests.exceptions.RequestException as e:
+                                print(f"Error: {e}")
+                        if browser is not None:
+                            browser.quit()
+                        print(f"{GREEN} Done!{RESET}")
+            except Exception as e:
+                print(f"Error: {e}")
     except KeyboardInterrupt:
         print("\nCtrl+C pressed. Exiting...")
         sys.exit(0)
